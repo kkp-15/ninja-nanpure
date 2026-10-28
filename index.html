@@ -285,6 +285,7 @@ function enterPlay(){
 function fmt(ms){const s=Math.floor(ms/1000);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
 function go(){if(!S||S.done)return;running=true;lastTick=performance.now();$('overlay').classList.remove('show');$('pauseBtn').textContent='止める';tick();}
 function stop(){if(running&&S){S.elapsed+=performance.now()-lastTick;store();}running=false;}
+function live(){if(!S||S.done)return false;if(!running&&!$('overlay').classList.contains('show'))go();return running;}
 function tick(){if(!running)return;const now=performance.now();S.elapsed+=now-lastTick;lastTick=now;$('time').textContent=fmt(S.elapsed);setTimeout(tick,500);}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();else if(S&&!S.done&&!$('play').classList.contains('hide')&&!$('overlay').classList.contains('show'))go();});
 window.addEventListener('pagehide',()=>{stop();});
@@ -317,7 +318,7 @@ function render(){
 // ===== 操作 =====
 function push(){S.hist.push([S.cells.slice(),S.memo.slice()]);if(S.hist.length>200)S.hist.shift();}
 function input(v){
-  if(!S||S.done||sel<0||S.puzzle[sel]||!running)return;
+  if(!S||S.done||sel<0||S.puzzle[sel]||!live())return;
   if(memoMode){if(S.cells[sel])return;push();S.memo[sel]^=(1<<v);}
   else{
     if(S.cells[sel]===v)return;
@@ -327,10 +328,10 @@ function input(v){
   }
   store();render();check();
 }
-function erase(){if(!S||sel<0||S.puzzle[sel]||!running)return;if(!S.cells[sel]&&!S.memo[sel])return;push();S.cells[sel]=0;S.memo[sel]=0;store();render();}
-function undo(){if(!S||!S.hist.length||!running)return;const [c,m]=S.hist.pop();S.cells=c;S.memo=m;store();render();}
+function erase(){if(!S||sel<0||S.puzzle[sel]||!live())return;if(!S.cells[sel]&&!S.memo[sel])return;push();S.cells[sel]=0;S.memo[sel]=0;store();render();}
+function undo(){if(!S||!S.hist.length||!live())return;const [c,m]=S.hist.pop();S.cells=c;S.memo=m;store();render();}
 function hint(){
-  if(!S||S.done||!running)return;
+  if(!S||S.done||!live())return;
   let i=sel>=0&&!S.puzzle[sel]&&S.cells[sel]!==S.solution[sel]?sel:-1;
   if(i<0){const empty=[];for(let k=0;k<81;k++)if(S.cells[k]!==S.solution[k])empty.push(k);if(!empty.length)return;i=empty[(Math.random()*empty.length)|0];}
   push();S.cells[i]=S.solution[i];S.memo[i]=0;for(let j=0;j<81;j++)if(peer(j,i))S.memo[j]&=~(1<<S.solution[i]);
@@ -349,7 +350,7 @@ function check(){
   if(ins&&getComputedStyle(ins.parentNode).display!=='none'){try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(_){}}
 }
 
-board.addEventListener('click',e=>{const c=e.target.closest('.c');if(!c||!running)return;sel=+c.dataset.i;if(lock&&!S.puzzle[sel]&&(memoMode||!S.cells[sel]))input(lock);else render();});
+board.addEventListener('click',e=>{const c=e.target.closest('.c');if(!c||!live())return;sel=+c.dataset.i;if(lock&&!S.puzzle[sel]&&(memoMode||!S.cells[sel]))input(lock);else render();});
 // 長押しでその数字を固定（続けて同じ数字を入れるとき、指を盤と数字の間で往復させない）
 let lpTimer=0,lpFired=false;
 padRow.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;lpFired=false;clearTimeout(lpTimer);lpTimer=setTimeout(()=>{lpFired=true;const v=+b.dataset.v;lock=lock===v?0:v;if(navigator.vibrate)navigator.vibrate(15);render();},450);});
