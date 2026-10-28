@@ -71,6 +71,14 @@ header h1{font-size:1rem;margin:0;font-weight:800;color:var(--sub)}
 details{font-size:.85rem;color:#6b5a45;line-height:1.8}
 details summary{min-height:40px;display:flex;align-items:center;font-weight:700;color:var(--sub)}
 details ul{margin:0;padding-left:1.2em}
+.deco{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:10px 0}
+.mini{height:min(100%,calc(min(100vw,480px) - 20px));aspect-ratio:1;container-type:size;display:grid;grid-template-columns:repeat(9,1fr);background:#fff;border:2px solid var(--bold);border-radius:6px;overflow:hidden;opacity:.6}
+.mini i{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-style:normal;font-weight:800;color:var(--given);font-size:7cqh;line-height:1}
+.mini i:nth-child(9n){border-right:none}
+.mini i.br{border-right:2px solid var(--bold)}
+.mini i.bb{border-bottom:2px solid var(--bold)}
+.mini i:nth-last-child(-n+9){border-bottom:none}
+@media (max-height:560px){.deco{display:none}}
 .lv{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .lv button{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;background:#fff;border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:12px;padding:10px 12px;min-height:76px;gap:4px}
 .lv button b{font-size:1.1rem}
@@ -121,6 +129,7 @@ body.playing footer{display:none}
       <li>数字を入れると、同じ列・行・ブロックのメモは自動で消えます。</li>
       <li>アプリを切り替えると時計は止まります。</li>
     </ul></details>
+    <div class="deco" aria-hidden="true"><div class="mini" id="mini"></div></div>
     <div class="lv" id="lvList"></div>
     <button class="resume hide" id="resumeBtn">続きから遊ぶ</button>
   </section>
@@ -264,6 +273,7 @@ function showHome(){
   document.body.classList.remove('playing');stop();$('home').classList.remove('hide');$('play').classList.add('hide');$('stat').classList.add('hide');
   const saved=load();$('resumeBtn').classList.toggle('hide',!(saved&&!saved.done));
   if(saved&&!saved.done)$('resumeBtn').textContent=`続きから遊ぶ（${LV[saved.lv].name}・${fmt(saved.elapsed)}）`;
+  if(!$('mini').firstChild){const A='534678912672195348198342567859761423426853791713924856961537284287419635345286179',H='100110011010001100001100010100010001010101010100010001010001100001100010110011001';$('mini').innerHTML=[...A].map((v,i)=>{const x=i%9,y=(i/9)|0;return `<i class="${x===2||x===5?'br ':''}${y===2||y===5?'bb':''}">${H[i]==='1'?v:''}</i>`;}).join('');}
   $('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b?`<br>最速 ${fmt(b)}`:''}</span></button>`;}).join('');
 }
 async function start(lv){
