@@ -106,7 +106,6 @@ body.playing footer{display:none}
     <h1>ナンプレ</h1>
     <div class="stat hide" id="stat">
       <span id="lvName"></span>
-      <span>ミス <b id="miss">0</b></span>
       <b id="time">0:00</b>
       <button class="pill" id="pauseBtn">止める</button>
     </div>
@@ -117,7 +116,8 @@ body.playing footer{display:none}
     <p class="lead">難しさを選ぶと、答えが1つに決まる問題をその場で作ります。途中でやめても続きから遊べます。</p>
     <details><summary>遊び方</summary><ul>
       <li>たて・よこ・太線の3×3に、1〜9が1つずつ入るように埋めます。</li>
-      <li>マスを押してから数字を押します。数字を長押しすると、その数字を続けて入れられます。</li>
+      <li>マスを押してから数字を押します。先に数字を押すと、その数字を持ったまま空いているマスを押すだけで続けて入れられます（もう一度押すとやめます）。</li>
+      <li>同じ列・行・ブロックに同じ数字があるときだけ赤くなります。答えが合っているかは、最後まで埋めるまで分かりません。</li>
       <li>数字を入れると、同じ列・行・ブロックのメモは自動で消えます。</li>
       <li>アプリを切り替えると時計は止まります。</li>
     </ul></details>
@@ -271,7 +271,7 @@ async function start(lv){
   const r=await generate(lv);
   $('gen').style.display='none';
   S={lv,puzzle:r.puzzle,solution:r.solution,cells:r.puzzle.slice(),memo:new Array(81).fill(0),miss:0,elapsed:0,hist:[],done:false};
-  sel=S.puzzle.findIndex(v=>!v);store();enterPlay();
+  sel=-1;lock=0;store();enterPlay();
   if(window.gtag)gtag('event','nanpure_start',{lv});
 }
 function enterPlay(){
@@ -298,21 +298,24 @@ for(let v=1;v<=9;v++){const b=document.createElement('button');b.dataset.v=v;b.i
 const peer=(a,b)=>((a/9)|0)===((b/9)|0)||a%9===b%9||(((a/27)|0)===((b/27)|0)&&(((a%9)/3)|0)===(((b%9)/3)|0));
 
 function render(){
-  const cells=board.children,sv=sel>=0?S.cells[sel]:0;
+  const cells=board.children,sv=sel>=0?S.cells[sel]:0,hv=sv||lock;
+  // ルール違反（同じ列・行・ブロックに同じ数字）だけを印にする。答えとは比べない＝押していけば答えが分かる、を防ぐ
+  const dup=new Array(81).fill(false);
+  for(let i=0;i<81;i++){const v=S.cells[i];if(!v)continue;for(let j=i+1;j<81;j++)if(S.cells[j]===v&&peer(i,j)){dup[i]=dup[j]=true;}}
   for(let i=0;i<81;i++){
     const d=cells[i],v=S.cells[i],given=!!S.puzzle[i];
     let cls='c'+(i%9===2||i%9===5?' br':'')+(((i/9)|0)===2||((i/9)|0)===5?' bb':'');
     if(given)cls+=' g';else if(v)cls+=' u';
-    if(v&&!given&&v!==S.solution[i])cls+=' err';
-    if(i===sel)cls+=' sel';else if(sv&&v===sv)cls+=' same';else if(sel>=0&&peer(i,sel))cls+=' peer';
+    if(v&&dup[i])cls+=' err';
+    if(i===sel)cls+=' sel';else if(hv&&v===hv)cls+=' same';else if(sel>=0&&peer(i,sel))cls+=' peer';
     d.className=cls;
     if(v)d.textContent=v;
-    else if(S.memo[i]){let h='<div class="m">';for(let k=1;k<=9;k++)h+=`<span class="${sv===k?'hl':''}">${S.memo[i]&(1<<k)?k:''}</span>`;d.innerHTML=h+'</div>';}
+    else if(S.memo[i]){let h='<div class="m">';for(let k=1;k<=9;k++)h+=`<span class="${hv===k?'hl':''}">${S.memo[i]&(1<<k)?k:''}</span>`;d.innerHTML=h+'</div>';}
     else d.textContent='';
   }
-  const cnt=new Array(10).fill(0);S.cells.forEach((v,i)=>{if(v&&v===S.solution[i])cnt[v]++;});
+  const cnt=new Array(10).fill(0);S.cells.forEach(v=>{if(v)cnt[v]++;});
   [...padRow.children].forEach(b=>{const v=+b.dataset.v;b.disabled=cnt[v]>=9;if(b.disabled&&lock===v)lock=0;b.classList.toggle('lock',lock===v);b.querySelector('small').textContent=cnt[v]>=9?'':`${9-cnt[v]}`;});
-  $('miss').textContent=S.miss;$('time').textContent=fmt(S.elapsed);
+  $('time').textContent=fmt(S.elapsed);
 }
 
 // ===== 操作 =====
@@ -323,8 +326,7 @@ function input(v){
   else{
     if(S.cells[sel]===v)return;
     push();S.cells[sel]=v;S.memo[sel]=0;
-    if(v!==S.solution[sel])S.miss++;
-    else for(let j=0;j<81;j++)if(peer(j,sel))S.memo[j]&=~(1<<v);
+    for(let j=0;j<81;j++)if(peer(j,sel))S.memo[j]&=~(1<<v);
   }
   store();render();check();
 }
@@ -333,7 +335,7 @@ function undo(){if(!S||!S.hist.length||!live())return;const [c,m]=S.hist.pop();S
 function hint(){
   if(!S||S.done||!live())return;
   let i=sel>=0&&!S.puzzle[sel]&&S.cells[sel]!==S.solution[sel]?sel:-1;
-  if(i<0){const empty=[];for(let k=0;k<81;k++)if(S.cells[k]!==S.solution[k])empty.push(k);if(!empty.length)return;i=empty[(Math.random()*empty.length)|0];}
+  if(i<0){const empty=[];for(let k=0;k<81;k++)if(!S.cells[k])empty.push(k);if(!empty.length)return;i=empty[(Math.random()*empty.length)|0];}
   push();S.cells[i]=S.solution[i];S.memo[i]=0;for(let j=0;j<81;j++)if(peer(j,i))S.memo[j]&=~(1<<S.solution[i]);
   S.hints=(S.hints||0)+1;sel=i;store();render();check();
 }
@@ -341,8 +343,8 @@ function check(){
   if(!S.cells.every((v,i)=>v===S.solution[i]))return;
   stop();S.done=true;store();
   const rec=best(S.lv,S.elapsed)===true;
-  if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),miss:S.miss,hints:S.hints||0});
-  $('card').innerHTML=`${AD}<h3>できました</h3><p>${LV[S.lv].name}</p><div class="big">${fmt(S.elapsed)}</div><p>ミス ${S.miss}回${S.hints?`・ヒント ${S.hints}回`:''}${rec?'<br><b style="color:var(--accent-d)">この難しさで最速です</b>':''}</p>
+  if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
+  $('card').innerHTML=`${AD}<h3>できました</h3><p>${LV[S.lv].name}</p><div class="big">${fmt(S.elapsed)}</div><p>${S.hints?`ヒント ${S.hints}回`:''}${rec&&S.hints?'<br>':''}${rec?'<b style="color:var(--accent-d)">この難しさで最速です</b>':''}</p>
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
   const ov=$('overlay');if(petNext){ov.style.setProperty('--pet',`url(${petNext})`);ov.classList.add('pet');}
   ov.classList.add('show');
@@ -350,20 +352,24 @@ function check(){
   if(ins&&getComputedStyle(ins.parentNode).display!=='none'){try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(_){}}
 }
 
-board.addEventListener('click',e=>{const c=e.target.closest('.c');if(!c||!live())return;sel=+c.dataset.i;if(lock&&!S.puzzle[sel]&&(memoMode||!S.cells[sel]))input(lock);else render();});
+board.addEventListener('click',e=>{const c=e.target.closest('.c');if(!c||!live())return;const i=+c.dataset.i;
+  if(lock&&!S.puzzle[i]){sel=i;if(memoMode||!S.cells[i])input(lock);else render();return;}
+  sel=(sel===i)?-1:i;render();});
 // 長押しでその数字を固定（続けて同じ数字を入れるとき、指を盤と数字の間で往復させない）
 let lpTimer=0,lpFired=false;
 padRow.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;lpFired=false;clearTimeout(lpTimer);lpTimer=setTimeout(()=>{lpFired=true;const v=+b.dataset.v;lock=lock===v?0:v;if(navigator.vibrate)navigator.vibrate(15);render();},450);});
 ['pointerup','pointerleave','pointercancel'].forEach(t=>padRow.addEventListener(t,()=>clearTimeout(lpTimer)));
 padRow.addEventListener('contextmenu',e=>e.preventDefault());
-padRow.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(lpFired){lpFired=false;return;}const v=+b.dataset.v;if(lock&&lock!==v){lock=0;}input(v);});
+padRow.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(lpFired){lpFired=false;return;}const v=+b.dataset.v;if(!S||!live())return;
+  if(sel<0||S.puzzle[sel]){lock=lock===v?0:v;render();return;}
+  if(lock&&lock!==v)lock=0;input(v);});
 $('eraseBtn').onclick=erase;$('undoBtn').onclick=undo;$('hintBtn').onclick=hint;
 function syncMemo(){$('memoBtn').classList.toggle('on',memoMode);$('memoBtn').textContent=memoMode?'メモ中':'メモ';$('pad').classList.toggle('memo',memoMode);}
 $('memoBtn').onclick=()=>{memoMode=!memoMode;syncMemo();};
 $('pauseBtn').onclick=()=>{if(!S||S.done)return;stop();$('pauseBtn').textContent='再開';
   $('card').innerHTML=`<h3>一時停止中</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><div class="btns"><button data-act="new">同じ難しさで新しい問題</button><button data-act="home">難しさを選び直す</button><button class="pri" data-act="resume">続ける</button></div>`;
   $('overlay').classList.add('show');};
-$('resumeBtn').onclick=()=>{S=load();if(S){sel=S.cells.findIndex(v=>!v);enterPlay();}};
+$('resumeBtn').onclick=()=>{S=load();if(S){sel=-1;lock=0;enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
 $('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='resume')go();else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
