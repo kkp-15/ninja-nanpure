@@ -94,6 +94,8 @@ body.playing footer{display:none}
 .kkp-ad-label{font-size:11px;color:#999;letter-spacing:.08em;margin:0 0 6px;line-height:1}
 .kkp-ad ins.adsbygoogle{display:block;width:300px;height:250px;margin:0 auto}
 @media (max-height:640px){.kkp-ad{display:none}}
+/* クリアのごほうび：背景に猫か犬の絵（上半分に見える） */
+#overlay.pet{background:#f3efe8 var(--pet) center top/cover no-repeat}
 .hide{display:none!important}
 </style>
 </head>
@@ -232,6 +234,10 @@ function make(lv){
 onmessage=e=>postMessage(make(e.data));
 `;
 const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1298304917726270" data-ad-slot="2937937957" data-ad-format="rectangle" data-full-width-responsive="false"></ins></div>`;
+const PETS=['cat1','cat2','cat3','cat4','dog1','dog2','dog3','dog4'];
+let petNext='';
+// 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
+function preloadPet(){const k=PETS[(Math.random()*PETS.length)|0],u=`img/pets/${k}.jpg`;const im=new Image();im.onload=()=>{petNext=u;};im.onerror=()=>{petNext='';};im.src=u;}
 let worker=null;
 try{worker=new Worker(URL.createObjectURL(new Blob([GEN_SRC],{type:'text/javascript'})));}catch(_){}
 function generate(lv){
@@ -268,6 +274,7 @@ async function start(lv){
   if(window.gtag)gtag('event','nanpure_start',{lv});
 }
 function enterPlay(){
+  preloadPet();
   document.body.classList.add('playing');window.scrollTo(0,0);
   $('home').classList.add('hide');$('play').classList.remove('hide');$('stat').classList.remove('hide');
   $('lvName').textContent=LV[S.lv].name;memoMode=false;syncMemo();render();go();
@@ -335,7 +342,8 @@ function check(){
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),miss:S.miss,hints:S.hints||0});
   $('card').innerHTML=`${AD}<h3>できました</h3><p>${LV[S.lv].name}</p><div class="big">${fmt(S.elapsed)}</div><p>ミス ${S.miss}回${S.hints?`・ヒント ${S.hints}回`:''}${rec?'<br><b style="color:var(--accent-d)">この難しさで最速です</b>':''}</p>
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
-  $('overlay').classList.add('show');
+  const ov=$('overlay');if(petNext){ov.style.setProperty('--pet',`url(${petNext})`);ov.classList.add('pet');}
+  ov.classList.add('show');
   const ins=$('card').querySelector('ins.adsbygoogle');
   if(ins&&getComputedStyle(ins.parentNode).display!=='none'){try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(_){}}
 }
@@ -355,7 +363,7 @@ $('pauseBtn').onclick=()=>{if(!S||S.done)return;stop();$('pauseBtn').textContent
   $('overlay').classList.add('show');};
 $('resumeBtn').onclick=()=>{S=load();if(S){sel=S.cells.findIndex(v=>!v);enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
-$('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show');if(a==='resume')go();else if(a==='next'||a==='new')start(S.lv);else showHome();});
+$('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='resume')go();else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
   if(!S||$('play').classList.contains('hide'))return;
