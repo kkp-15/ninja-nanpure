@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nanpure.kkpwebninja.com/sitemap.xml
