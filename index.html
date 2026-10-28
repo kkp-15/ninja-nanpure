@@ -80,22 +80,23 @@ details ul{margin:0;padding-left:1.2em}
 /* 終わり・一時停止：ボタンは下側に */
 #overlay{position:fixed;inset:0;background:rgba(58,46,34,.45);display:none;align-items:flex-end;justify-content:center;z-index:10;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
 #overlay.show{display:flex}
-.card{background:#fff;border-radius:16px;padding:20px 18px 16px;max-width:456px;width:100%;text-align:center}
+.card{background:rgba(255,255,255,.96);border-radius:16px;padding:14px 16px 14px;max-width:456px;width:100%;text-align:center}
 .card h3{margin:0 0 6px;font-size:1.3rem}
 .card p{margin:6px 0;color:var(--sub)}
-.card .big{font-size:2rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.card .big{font-size:1.8rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .card .btns{display:grid;gap:8px;margin-top:14px}
 .card .btns button{min-height:58px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700}
 .card .btns button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 body.playing{overflow:hidden}
 body.playing footer{display:none}
 /* クリア後の広告：上に置き、ボタンから離す */
-.kkp-ad{text-align:center;margin:0 auto 12px;min-height:266px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.kkp-ad{text-align:center;margin:0 auto 12px;min-height:116px;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .kkp-ad-label{font-size:11px;color:#999;letter-spacing:.08em;margin:0 0 6px;line-height:1}
-.kkp-ad ins.adsbygoogle{display:block;width:300px;height:250px;margin:0 auto}
-@media (max-height:640px){.kkp-ad{display:none}}
+/* 絵が見えるように、広告は横長の小さい枠（320×100）にしてカードを低くする */
+.kkp-ad ins.adsbygoogle{display:block;width:320px;height:100px;margin:0 auto}
+@media (max-height:600px){.kkp-ad{display:none}}
 /* クリアのごほうび：背景に猫か犬の絵（上半分に見える） */
-#overlay.pet{background:#f3efe8 var(--pet) center top/cover no-repeat}
+#overlay.pet{background:#f3efe8 var(--pet) center top/min(100%,600px) auto no-repeat}
 .hide{display:none!important}
 </style>
 </head>
@@ -233,8 +234,8 @@ function make(lv){
 }
 onmessage=e=>postMessage(make(e.data));
 `;
-const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1298304917726270" data-ad-slot="2937937957" data-ad-format="rectangle" data-full-width-responsive="false"></ins></div>`;
-const PETS=['cat1','cat2','cat3','cat4','dog1','dog2','dog3','dog4'];
+const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1298304917726270" data-ad-slot="2937937957" data-full-width-responsive="false"></ins></div>`;
+const PETS=['cat1','cat2','cat3']; // 絵を足したらここに追加（img/pets/名前.jpg）
 let petNext='';
 // 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
 function preloadPet(){const k=PETS[(Math.random()*PETS.length)|0],u=`img/pets/${k}.jpg`;const im=new Image();im.onload=()=>{petNext=u;};im.onerror=()=>{petNext='';};im.src=u;}
