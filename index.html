@@ -95,7 +95,8 @@ details ul{margin:0;padding-left:1.2em}
 .mini i.bb{border-bottom:2px solid var(--bold)}
 .mini i:nth-last-child(-n+9){border-bottom:none}
 @media (max-height:560px){.deco{display:none}}
-.lv{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.extra{margin-top:auto}
+.lv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .lv button{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;background:#fff;border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:12px;padding:10px 12px;min-height:76px;gap:4px}
 .lv button b{font-size:1.1rem}
 .lv button span{font-size:.75rem;color:var(--sub);line-height:1.4}
@@ -122,6 +123,15 @@ body.playing footer{display:none}
 /* クリアのごほうび：背景に猫か犬の絵（上半分に見える） */
 #overlay.pet{background:#f3efe8 var(--pet) center top/min(100%,600px) auto no-repeat}
 .hide{display:none!important}
+/* 今日の1問・絵の図鑑（難しさボタンの上の1列） */
+.extra{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.extra button{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:58px;padding:8px 12px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.extra button b{font-size:.98rem}
+.extra button span{font-size:.75rem;color:var(--sub)}
+.extra button.today{border-color:var(--accent);background:var(--peer)}
+.extra button.today.doneday{background:#fff;border-color:var(--line)}
+.album{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 2px}
+.album button{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:#f3efe8 center 15%/cover no-repeat;padding:0;font-size:1.3rem;font-weight:800;color:#c9b99f}
 </style>
 </head>
 <body>
@@ -147,6 +157,7 @@ body.playing footer{display:none}
       <li>アプリを切り替えると時計は止まります。</li>
     </ul></details>
     <div class="deco" aria-hidden="true"><div class="mini" id="mini"></div></div>
+    <div class="extra"><button class="today" id="todayBtn"></button><button id="albumBtn"></button></div>
     <div class="lv" id="lvList"></div>
     <button class="resume hide" id="resumeBtn">続きから遊ぶ</button>
   </section>
@@ -258,10 +269,12 @@ function make(lv){
   }
   return fallback;
 }
-onmessage=e=>postMessage(make(e.data));
+onmessage=e=>{const d=e.data;if(d&&d.seed){let a=d.seed>>>0;Math.random=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};postMessage(make(d.lv));}else postMessage(make(d));};
 `;
 const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1298304917726270" data-ad-slot="2937937957" data-full-width-responsive="false"></ins></div>`;
-const PETS=['cat1','cat2','cat3']; // 絵を足したらここに追加（img/pets/名前.jpg）
+// 絵を足したらここに追加（img/pets/名前.jpg）。図鑑に名前が出る
+const PET_NAMES={cat1:'おひるねの茶とら',cat2:'のびのびハチワレ',cat3:'毛糸と白い子猫',cat4:'窓辺の三毛',cat5:'ティーカップの黒猫',cat6:'絵本でうとうと',dog1:'クッションの柴犬',dog2:'花畑のコーギー',dog3:'かごのトイプードル',dog4:'初雪のゴールデン',usagi1:'にんじんとうさぎ',hamster1:'ほっぺのハムスター'};
+const PETS=Object.keys(PET_NAMES);
 let petNext='';
 // 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
 // 絵は問題ごとに決めて保存する（続きから遊んでも同じ絵）。まだ集めていない絵を先に出す
@@ -271,15 +284,21 @@ function preloadPet(){
   const im=new Image();im.onload=()=>{petNext=u;board.style.setProperty('--pet',`url(${u})`);};im.src=u;
 }
 // 記録：難しさごとのクリア回数・ヒントなしの回数・集めた絵
-function stats(){try{const o=JSON.parse(localStorage.getItem(KEY+'-stats')||'{}');return {clears:o.clears||{},nohint:o.nohint||{},pets:o.pets||[]};}catch(_){return {clears:{},nohint:{},pets:[]};}}
+function stats(){try{const o=JSON.parse(localStorage.getItem(KEY+'-stats')||'{}');return {clears:o.clears||{},nohint:o.nohint||{},pets:o.pets||[],day:o.day||{}};}catch(_){return {clears:{},nohint:{},pets:[],day:{}};}}
+// 今日の1問：日付から問題を決める（みんな同じ問題）。続けて解いた日数を数える
+const TODAY_LV='normal';
+function ymd(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function daySeed(t){let h=2166136261;for(const c of 'nanpure'+t){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0||1;}
+function streakNow(day){if(!day.last)return 0;const y=new Date();y.setDate(y.getDate()-1);return day.last===ymd()||day.last===ymd(y)?day.streak:0;}
 function saveStats(o){try{localStorage.setItem(KEY+'-stats',JSON.stringify(o));}catch(_){}}
 let worker=null;
 try{worker=new Worker(URL.createObjectURL(new Blob([GEN_SRC],{type:'text/javascript'})));}catch(_){}
-function generate(lv){
+function generate(lv,seed){
   return new Promise(res=>{
-    if(worker){worker.onmessage=e=>res(e.data);worker.postMessage(lv);return;}
-    const f=new Function(GEN_SRC.replace('onmessage=e=>postMessage(make(e.data));','return make;'))();
-    setTimeout(()=>res(f(lv)),30);
+    if(worker){worker.onmessage=e=>res(e.data);worker.postMessage(seed?{lv,seed}:lv);return;}
+    // Worker が使えないときは同じ処理をその場で動かす
+    let out;const h=new Function('postMessage',GEN_SRC.replace(/^onmessage=/m,'const _h=')+';return _h;')(v=>{out=v;});
+    setTimeout(()=>{h({data:seed?{lv,seed}:lv});res(out);},30);
   });
 }
 
@@ -299,21 +318,25 @@ function showHome(){
   const saved=load();$('resumeBtn').classList.toggle('hide',!(saved&&!saved.done));
   if(saved&&!saved.done)$('resumeBtn').textContent=`続きから遊ぶ（${LV[saved.lv].name}・${fmt(saved.elapsed)}）`;
   if(!$('mini').firstChild){const A='534678912672195348198342567859761423426853791713924856961537284287419635345286179',H='100110011010001100001100010100010001010101010100010001010001100001100010110011001';$('mini').innerHTML=[...A].map((v,i)=>{const x=i%9,y=(i/9)|0;return `<i class="${x===2||x===5?'br ':''}${y===2||y===5?'bb':''}">${H[i]==='1'?v:''}</i>`;}).join('');}
-  const st=stats();$('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);const n=st.clears[k]||0;return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b||n?'<br>':''}${n?`クリア ${n}回`:''}${b&&n?'・':''}${b?`最速 ${fmt(b)}`:''}</span></button>`;}).join('');
+  const st=stats(),t=ymd(),doneToday=st.day.last===t,sk=streakNow(st.day);
+  $('todayBtn').innerHTML=`<b>今日の1問</b><span>${doneToday?'今日はクリア済み':`${LV[TODAY_LV].name}・みんな同じ問題`}${sk?`・${sk}日連続`:''}</span>`;
+  $('todayBtn').classList.toggle('doneday',doneToday);
+  $('albumBtn').innerHTML=`<b>絵の図鑑</b><span>集めた絵 ${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}</span>`;
+  $('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);const n=st.clears[k]||0;return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b||n?'<br>':''}${n?`クリア ${n}回`:''}${b&&n?'・':''}${b?`最速 ${fmt(b)}`:''}</span></button>`;}).join('');
 }
-async function start(lv){
+async function start(lv,daily){
   $('home').classList.add('hide');$('play').classList.add('hide');$('gen').style.display='flex';
-  const r=await generate(lv);
+  const r=await generate(lv,daily?daySeed(daily):0);
   $('gen').style.display='none';
-  S={lv,puzzle:r.puzzle,solution:r.solution,cells:r.puzzle.slice(),memo:new Array(81).fill(0),miss:0,elapsed:0,hist:[],done:false};
+  S={lv,puzzle:r.puzzle,solution:r.solution,cells:r.puzzle.slice(),memo:new Array(81).fill(0),miss:0,elapsed:0,hist:[],done:false,daily:daily||''};
   sel=-1;lock=0;store();enterPlay();
-  if(window.gtag)gtag('event','nanpure_start',{lv});
+  if(window.gtag)gtag('event','nanpure_start',{lv,daily:daily?1:0});
 }
 function enterPlay(){
   preloadPet();
   document.body.classList.add('playing');window.scrollTo(0,0);
   $('home').classList.add('hide');$('play').classList.remove('hide');$('stat').classList.remove('hide');
-  board.classList.remove('full');$('lvName').textContent=LV[S.lv].name;memoMode=false;syncMemo();render();go();
+  board.classList.remove('full');$('lvName').textContent=S.daily?'今日の1問':LV[S.lv].name;memoMode=false;syncMemo();render();go();
 }
 
 // ===== 時計（見えていない間は止める） =====
@@ -412,10 +435,12 @@ function check(){
   const rec=best(S.lv,S.elapsed)===true;
   const st=stats();st.clears[S.lv]=(st.clears[S.lv]||0)+1;if(!S.hints)st.nohint[S.lv]=(st.nohint[S.lv]||0)+1;
   const newPet=petNext&&S.pet&&!st.pets.includes(S.pet);if(newPet)st.pets.push(S.pet);saveStats(st);
+  let dayMsg='';
+  if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">今日の1問 ${st.day.streak}日連続</span>`;}
   const got=st.pets.filter(k=>PETS.includes(k)).length;
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
-  $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
-  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}<br><small>集めた絵 ${got} / ${PETS.length}</small></p>
+  $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日の1問・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
+  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}</small></p>
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
   // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
   if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
@@ -445,9 +470,24 @@ $('memoBtn').onclick=()=>{memoMode=!memoMode;syncMemo();};
 $('pauseBtn').onclick=()=>{if(S&&S.gaveup){giveupCard();return;}if(!S||S.done)return;stop();$('pauseBtn').textContent='再開';
   $('card').innerHTML=`<h3>一時停止中</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><div class="btns"><button data-act="new">同じ難しさで新しい問題</button><button data-act="home">難しさを選び直す</button><button data-act="giveup">降参して答えを見る</button><button class="pri" data-act="resume">続ける</button></div>`;
   $('overlay').classList.add('show');};
+function albumCard(){
+  const st=stats();
+  $('card').innerHTML=`<h3>絵の図鑑</h3><p>${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}　解くたびに、まだ見ていない絵から出ます</p>
+  <div class="album">${PETS.map(k=>st.pets.includes(k)?`<button data-pet="${k}" aria-label="${PET_NAMES[k]}" style="background-image:url(img/pets/${k}.jpg)"></button>`:`<button disabled aria-label="まだ">?</button>`).join('')}</div>
+  <div class="btns"><button class="pri" data-act="home">閉じる</button></div>`;
+  $('overlay').classList.remove('pet');$('overlay').classList.add('show');
+}
+$('albumBtn').onclick=albumCard;
+$('todayBtn').onclick=()=>{const t=ymd(),saved=load();
+  if(saved&&!saved.done&&saved.daily===t){S=saved;sel=-1;lock=0;enterPlay();return;}
+  if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。今日の1問を始めますか？'))return;
+  start(TODAY_LV,t);};
 $('resumeBtn').onclick=()=>{S=load();if(S){sel=-1;lock=0;enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
-$('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
+$('overlay').addEventListener('click',e=>{const pk=e.target.dataset.pet;
+  // 図鑑の絵を押したら大きく見る
+  if(pk){const ov=$('overlay');ov.style.setProperty('--pet',`url(img/pets/${pk}.jpg)`);ov.classList.add('pet');$('card').innerHTML=`<p><b>${PET_NAMES[pk]}</b></p><div class="btns"><button class="pri" data-act="album">図鑑にもどる</button></div>`;return;}
+  const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
   if(!S||$('play').classList.contains('hide'))return;
