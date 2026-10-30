@@ -344,7 +344,11 @@ function erase(){if(!S||sel<0||S.puzzle[sel]||!live())return;if(!S.cells[sel]&&!
 function undo(){if(!S||!S.hist.length||!live())return;const [c,m]=S.hist.pop();S.cells=c;S.memo=m;store();render();}
 function hint(){
   if(!S||S.done||!live())return;
-  let i=sel>=0&&!S.puzzle[sel]&&S.cells[sel]!==S.solution[sel]?sel:-1;
+  // まちがいが入っていると空きを埋めても先へ進めないので、まちがいを先に直す（選んでいるマスが違っていればそこ）
+  const bad=k=>S.cells[k]&&!S.puzzle[k]&&S.cells[k]!==S.solution[k];
+  let i=sel>=0&&bad(sel)?sel:-1;
+  if(i<0){const wrong=[];for(let k=0;k<81;k++)if(bad(k))wrong.push(k);if(wrong.length)i=wrong[(Math.random()*wrong.length)|0];}
+  if(i<0&&sel>=0&&!S.puzzle[sel]&&!S.cells[sel])i=sel;
   if(i<0){const empty=[];for(let k=0;k<81;k++)if(!S.cells[k])empty.push(k);if(!empty.length)return;i=empty[(Math.random()*empty.length)|0];}
   push();S.cells[i]=S.solution[i];S.memo[i]=0;for(let j=0;j<81;j++)if(peer(j,i))S.memo[j]&=~(1<<S.solution[i]);
   S.hints=(S.hints||0)+1;sel=i;store();render();check();
