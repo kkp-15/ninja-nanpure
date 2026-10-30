@@ -53,6 +53,10 @@ header h1{font-size:1rem;margin:0;font-weight:800;color:var(--sub)}
 .c.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--accent)}
 .c.err{color:var(--err)}
 .c.err.u{background:#fde3e3}
+/* 降参したとき：空いていた所は薄い字で答え、まちがえた所は赤地に正しい数字（左上に入れた数字を消し線で） */
+.c.ans{color:#b3a48e}
+.c.miss{background:#fde3e3;color:var(--err)}
+.c.miss s{position:absolute;left:4px;top:2px;font-size:clamp(9px,2.6vw,12px);color:#a07070}
 .m{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:clamp(8px,2.4vw,11px);font-weight:700;color:#8a7a66}
 .m span{display:flex;align-items:center;justify-content:center}
 .m span.hl{color:var(--accent-d)}
@@ -311,7 +315,7 @@ function render(){
   const cells=board.children,sv=sel>=0?S.cells[sel]:0,hv=sv||lock;
   // ルール違反（同じ列・行・ブロックに同じ数字）だけを印にする。答えとは比べない＝押していけば答えが分かる、を防ぐ
   const dup=new Array(81).fill(false);
-  for(let i=0;i<81;i++){const v=S.cells[i];if(!v)continue;for(let j=i+1;j<81;j++)if(S.cells[j]===v&&peer(i,j)){dup[i]=dup[j]=true;}}
+  if(!S.gaveup)for(let i=0;i<81;i++){const v=S.cells[i];if(!v)continue;for(let j=i+1;j<81;j++)if(S.cells[j]===v&&peer(i,j)){dup[i]=dup[j]=true;}}
   for(let i=0;i<81;i++){
     const d=cells[i],v=S.cells[i],given=!!S.puzzle[i];
     let cls='c'+(i%9===2||i%9===5?' br':'')+(((i/9)|0)===2||((i/9)|0)===5?' bb':'');
@@ -319,6 +323,8 @@ function render(){
     if(v&&dup[i])cls+=' err';
     if(i===sel)cls+=' sel';else if(hv&&v===hv)cls+=' same';else if(sel>=0&&peer(i,sel))cls+=' peer';
     d.className=cls;
+    if(S.gaveup&&!given){const a=S.solution[i];
+      if(v===a){}else if(v){cls+=' miss';d.className=cls;d.innerHTML=`<s>${v}</s>${a}`;continue;}else{cls+=' ans';d.className=cls;d.textContent=a;continue;}}
     if(v)d.textContent=v;
     else if(S.memo[i]){let h='<div class="m">';for(let k=1;k<=9;k++)h+=`<span class="${hv===k?'hl':''}">${S.memo[i]&(1<<k)?k:''}</span>`;d.innerHTML=h+'</div>';}
     else d.textContent='';
@@ -353,6 +359,18 @@ function hint(){
   push();S.cells[i]=S.solution[i];S.memo[i]=0;for(let j=0;j<81;j++)if(peer(j,i))S.memo[j]&=~(1<<S.solution[i]);
   S.hints=(S.hints||0)+1;sel=i;store();render();check();
 }
+// 降参：答えを盤に出し、まちがえた所と空いていた所を数えて見せる
+function giveup(){
+  stop();S.done=true;S.gaveup=true;sel=-1;lock=0;store();render();
+  if(window.gtag)gtag('event','nanpure_giveup',{lv:S.lv,sec:Math.round(S.elapsed/1000)});
+  $('pauseBtn').textContent='次へ';giveupCard();
+}
+function giveupCard(){
+  let miss=0,blank=0;for(let i=0;i<81;i++){if(S.puzzle[i])continue;if(!S.cells[i])blank++;else if(S.cells[i]!==S.solution[i])miss++;}
+  $('card').innerHTML=`<h3>答え</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><p>${miss?`<b style="color:var(--err)">まちがい ${miss}マス</b>（赤い所）`:'入れた数字はぜんぶ合っていました'}${blank?`<br>空いていた所 ${blank}マス（薄い字）`:''}</p>
+  <div class="btns"><button data-act="look">盤を見る</button><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
+  $('overlay').classList.add('show');
+}
 function check(){
   if(!S.cells.every((v,i)=>v===S.solution[i]))return;
   stop();S.done=true;store();
@@ -380,12 +398,12 @@ padRow.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)ret
 $('eraseBtn').onclick=erase;$('undoBtn').onclick=undo;$('hintBtn').onclick=hint;
 function syncMemo(){$('memoBtn').classList.toggle('on',memoMode);$('memoBtn').textContent=memoMode?'メモ中':'メモ';$('pad').classList.toggle('memo',memoMode);}
 $('memoBtn').onclick=()=>{memoMode=!memoMode;syncMemo();};
-$('pauseBtn').onclick=()=>{if(!S||S.done)return;stop();$('pauseBtn').textContent='再開';
-  $('card').innerHTML=`<h3>一時停止中</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><div class="btns"><button data-act="new">同じ難しさで新しい問題</button><button data-act="home">難しさを選び直す</button><button class="pri" data-act="resume">続ける</button></div>`;
+$('pauseBtn').onclick=()=>{if(S&&S.gaveup){giveupCard();return;}if(!S||S.done)return;stop();$('pauseBtn').textContent='再開';
+  $('card').innerHTML=`<h3>一時停止中</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><div class="btns"><button data-act="new">同じ難しさで新しい問題</button><button data-act="home">難しさを選び直す</button><button data-act="giveup">降参して答えを見る</button><button class="pri" data-act="resume">続ける</button></div>`;
   $('overlay').classList.add('show');};
 $('resumeBtn').onclick=()=>{S=load();if(S){sel=-1;lock=0;enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
-$('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='resume')go();else if(a==='next'||a==='new')start(S.lv);else showHome();});
+$('overlay').addEventListener('click',e=>{const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
   if(!S||$('play').classList.contains('hide'))return;
