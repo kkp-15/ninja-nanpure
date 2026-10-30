@@ -40,8 +40,8 @@ header h1{font-size:1rem;margin:0;font-weight:800;color:var(--sub)}
 .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:0 12px;min-height:40px;font-size:.85rem;font-weight:700;color:var(--sub)}
 #play{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:8px}
 .boardbox{position:relative;width:min(100%,calc(100dvh - 250px - env(safe-area-inset-bottom)));margin:0 auto}
-#board{display:grid;grid-template-columns:repeat(9,1fr);width:100%;aspect-ratio:1;background:#fff;border:2px solid var(--bold);border-radius:6px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
-.c{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:clamp(18px,6.2vw,30px);font-weight:700;line-height:1}
+#board{display:grid;grid-template-columns:repeat(9,1fr);width:100%;aspect-ratio:1;background:#fff var(--pet,none) center 12%/cover no-repeat;border:2px solid var(--bold);border-radius:6px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+.c{position:relative;background:#fff;transition:background-color .9s,color .9s,border-color .9s;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:clamp(18px,6.2vw,30px);font-weight:700;line-height:1}
 .c:nth-child(9n){border-right:none}
 .c.br{border-right:2px solid var(--bold)}
 .c.bb{border-bottom:2px solid var(--bold)}
@@ -55,6 +55,18 @@ header h1{font-size:1rem;margin:0;font-weight:800;color:var(--sub)}
 .c.err.u{background:#fde3e3}
 /* 降参したとき：空いていた所は薄い字で答え、まちがえた所は赤地に正しい数字（左上に入れた数字を消し線で） */
 .c.ans{color:#b3a48e}
+/* ごほうび：3×3を正しく埋めると、そのブロックの後ろの絵がうっすら見える。全部そろうと絵が全部出る */
+.c.rv{background:rgba(255,255,255,.6);text-shadow:0 0 3px #fff,0 0 3px #fff}
+.c.rv.peer{background:rgba(255,241,224,.5)}
+.c.rv.same{background:rgba(255,210,168,.7)}
+.c.rv.sel{background:rgba(255,226,199,.8)}
+#board.full .c{background:transparent;color:transparent;text-shadow:none;border-color:transparent;transition-duration:1.4s}
+#board.full .c .m{display:none}
+/* 列・行・ブロックがそろった瞬間に、そのマスが順にはねる */
+.c.fl{animation:fl .5s ease-out both}
+@keyframes fl{0%{transform:scale(1)}40%{transform:scale(1.18);color:var(--accent-d)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.c.fl{animation:none}}
+.badge{display:inline-block;margin:2px 3px;padding:2px 10px;border-radius:999px;background:var(--peer);color:var(--accent-d);font-size:.8rem;font-weight:700}
 .c.miss{background:#fde3e3;color:var(--err)}
 .c.miss s{position:absolute;left:4px;top:2px;font-size:clamp(9px,2.6vw,12px);color:#a07070}
 .m{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:clamp(8px,2.4vw,11px);font-weight:700;color:#8a7a66}
@@ -129,7 +141,8 @@ body.playing footer{display:none}
     <details><summary>遊び方</summary><ul>
       <li>たて・よこ・太線の3×3に、1〜9が1つずつ入るように埋めます。</li>
       <li>マスを押してから数字を押します。先に数字を押すと、その数字を持ったまま空いているマスを押すだけで続けて入れられます（もう一度押すとやめます）。</li>
-      <li>同じ列・行・ブロックに同じ数字があるときだけ赤くなります。答えが合っているかは、最後まで埋めるまで分かりません。</li>
+      <li>同じ列・行・ブロックに同じ数字があるときだけ赤くなります。</li>
+      <li>太線の3×3をぜんぶ正しく埋めると、後ろの絵がうっすら見えます。最後まで解くと絵がぜんぶ出ます。</li>
       <li>数字を入れると、同じ列・行・ブロックのメモは自動で消えます。</li>
       <li>アプリを切り替えると時計は止まります。</li>
     </ul></details>
@@ -251,7 +264,15 @@ const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="
 const PETS=['cat1','cat2','cat3']; // 絵を足したらここに追加（img/pets/名前.jpg）
 let petNext='';
 // 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
-function preloadPet(){const k=PETS[(Math.random()*PETS.length)|0],u=`img/pets/${k}.jpg`;const im=new Image();im.onload=()=>{petNext=u;};im.onerror=()=>{petNext='';};im.src=u;}
+// 絵は問題ごとに決めて保存する（続きから遊んでも同じ絵）。まだ集めていない絵を先に出す
+function preloadPet(){
+  if(!S.pet||!PETS.includes(S.pet)){const got=stats().pets,left=PETS.filter(k=>!got.includes(k)),pool=left.length?left:PETS;S.pet=pool[(Math.random()*pool.length)|0];store();}
+  const u=`img/pets/${S.pet}.jpg`;petNext='';board.style.removeProperty('--pet');
+  const im=new Image();im.onload=()=>{petNext=u;board.style.setProperty('--pet',`url(${u})`);};im.src=u;
+}
+// 記録：難しさごとのクリア回数・ヒントなしの回数・集めた絵
+function stats(){try{const o=JSON.parse(localStorage.getItem(KEY+'-stats')||'{}');return {clears:o.clears||{},nohint:o.nohint||{},pets:o.pets||[]};}catch(_){return {clears:{},nohint:{},pets:[]};}}
+function saveStats(o){try{localStorage.setItem(KEY+'-stats',JSON.stringify(o));}catch(_){}}
 let worker=null;
 try{worker=new Worker(URL.createObjectURL(new Blob([GEN_SRC],{type:'text/javascript'})));}catch(_){}
 function generate(lv){
@@ -278,7 +299,7 @@ function showHome(){
   const saved=load();$('resumeBtn').classList.toggle('hide',!(saved&&!saved.done));
   if(saved&&!saved.done)$('resumeBtn').textContent=`続きから遊ぶ（${LV[saved.lv].name}・${fmt(saved.elapsed)}）`;
   if(!$('mini').firstChild){const A='534678912672195348198342567859761423426853791713924856961537284287419635345286179',H='100110011010001100001100010100010001010101010100010001010001100001100010110011001';$('mini').innerHTML=[...A].map((v,i)=>{const x=i%9,y=(i/9)|0;return `<i class="${x===2||x===5?'br ':''}${y===2||y===5?'bb':''}">${H[i]==='1'?v:''}</i>`;}).join('');}
-  $('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b?`<br>最速 ${fmt(b)}`:''}</span></button>`;}).join('');
+  const st=stats();$('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);const n=st.clears[k]||0;return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b||n?'<br>':''}${n?`クリア ${n}回`:''}${b&&n?'・':''}${b?`最速 ${fmt(b)}`:''}</span></button>`;}).join('');
 }
 async function start(lv){
   $('home').classList.add('hide');$('play').classList.add('hide');$('gen').style.display='flex';
@@ -292,7 +313,7 @@ function enterPlay(){
   preloadPet();
   document.body.classList.add('playing');window.scrollTo(0,0);
   $('home').classList.add('hide');$('play').classList.remove('hide');$('stat').classList.remove('hide');
-  $('lvName').textContent=LV[S.lv].name;memoMode=false;syncMemo();render();go();
+  board.classList.remove('full');$('lvName').textContent=LV[S.lv].name;memoMode=false;syncMemo();render();go();
 }
 
 // ===== 時計（見えていない間は止める） =====
@@ -309,6 +330,17 @@ const board=$('board');
 for(let i=0;i<81;i++){const d=document.createElement('div');d.className='c'+(i%9===2||i%9===5?' br':'')+(((i/9)|0)===2||((i/9)|0)===5?' bb':'');d.dataset.i=i;d.setAttribute('role','gridcell');board.appendChild(d);}
 const padRow=$('pad');
 for(let v=1;v<=9;v++){const b=document.createElement('button');b.dataset.v=v;b.innerHTML=`${v}<small></small>`;padRow.appendChild(b);}
+const BOXOF=i=>(((i/27)|0)*3)+(((i%9)/3)|0);
+// 0〜8=行・9〜17=列・18〜26=ブロック
+const UNIT=[];for(let u=0;u<9;u++)UNIT.push([...Array(9)].map((_,k)=>u*9+k));for(let u=0;u<9;u++)UNIT.push([...Array(9)].map((_,k)=>k*9+u));for(let u=0;u<9;u++){const r0=((u/3)|0)*3,c0=(u%3)*3;UNIT.push([...Array(9)].map((_,k)=>(r0+((k/3)|0))*9+c0+k%3));}
+// i に入れたことで正しくそろった列・行・ブロックのマスを、順にはねさせる
+function cheer(i){
+  if(S.gaveup)return;const ok=u=>u.includes(i)&&u.every(k=>S.cells[k]===S.solution[k]);
+  const hit=UNIT.filter(ok);if(!hit.length)return;
+  const cells=board.children,seen=new Set();
+  hit.forEach(u=>u.forEach((k,n)=>{if(seen.has(k))return;seen.add(k);const d=cells[k];d.classList.remove('fl');void d.offsetWidth;d.style.animationDelay=`${n*35}ms`;d.classList.add('fl');setTimeout(()=>d.classList.remove('fl'),600+n*35);}));
+  if(navigator.vibrate)navigator.vibrate(hit.some(u=>UNIT.indexOf(u)>=18)?[20,40,20]:15);
+}
 const peer=(a,b)=>((a/9)|0)===((b/9)|0)||a%9===b%9||(((a/27)|0)===((b/27)|0)&&(((a%9)/3)|0)===(((b%9)/3)|0));
 
 function render(){
@@ -316,11 +348,14 @@ function render(){
   // ルール違反（同じ列・行・ブロックに同じ数字）だけを印にする。答えとは比べない＝押していけば答えが分かる、を防ぐ
   const dup=new Array(81).fill(false);
   if(!S.gaveup)for(let i=0;i<81;i++){const v=S.cells[i];if(!v)continue;for(let j=i+1;j<81;j++)if(S.cells[j]===v&&peer(i,j)){dup[i]=dup[j]=true;}}
+  const rv=new Array(9).fill(false);
+  if(!S.gaveup)for(let b=0;b<9;b++)rv[b]=UNIT[18+b].every(k=>S.cells[k]===S.solution[k]);
   for(let i=0;i<81;i++){
     const d=cells[i],v=S.cells[i],given=!!S.puzzle[i];
     let cls='c'+(i%9===2||i%9===5?' br':'')+(((i/9)|0)===2||((i/9)|0)===5?' bb':'');
     if(given)cls+=' g';else if(v)cls+=' u';
     if(v&&dup[i])cls+=' err';
+    if(rv[BOXOF(i)])cls+=' rv';
     if(i===sel)cls+=' sel';else if(hv&&v===hv)cls+=' same';else if(sel>=0&&peer(i,sel))cls+=' peer';
     d.className=cls;
     if(S.gaveup&&!given){const a=S.solution[i];
@@ -344,7 +379,7 @@ function input(v){
     push();S.cells[sel]=v;S.memo[sel]=0;
     for(let j=0;j<81;j++)if(peer(j,sel))S.memo[j]&=~(1<<v);
   }
-  store();render();check();
+  store();render();if(!memoMode)cheer(sel);check();
 }
 function erase(){if(!S||sel<0||S.puzzle[sel]||!live())return;if(!S.cells[sel]&&!S.memo[sel])return;push();S.cells[sel]=0;S.memo[sel]=0;store();render();}
 function undo(){if(!S||!S.hist.length||!live())return;const [c,m]=S.hist.pop();S.cells=c;S.memo=m;store();render();}
@@ -357,7 +392,7 @@ function hint(){
   if(i<0&&sel>=0&&!S.puzzle[sel]&&!S.cells[sel])i=sel;
   if(i<0){const empty=[];for(let k=0;k<81;k++)if(!S.cells[k])empty.push(k);if(!empty.length)return;i=empty[(Math.random()*empty.length)|0];}
   push();S.cells[i]=S.solution[i];S.memo[i]=0;for(let j=0;j<81;j++)if(peer(j,i))S.memo[j]&=~(1<<S.solution[i]);
-  S.hints=(S.hints||0)+1;sel=i;store();render();check();
+  S.hints=(S.hints||0)+1;sel=i;store();render();cheer(i);check();
 }
 // 降参：答えを盤に出し、まちがえた所と空いていた所を数えて見せる
 function giveup(){
@@ -373,15 +408,24 @@ function giveupCard(){
 }
 function check(){
   if(!S.cells.every((v,i)=>v===S.solution[i]))return;
-  stop();S.done=true;store();
+  stop();S.done=true;sel=-1;lock=0;store();render();
   const rec=best(S.lv,S.elapsed)===true;
+  const st=stats();st.clears[S.lv]=(st.clears[S.lv]||0)+1;if(!S.hints)st.nohint[S.lv]=(st.nohint[S.lv]||0)+1;
+  const newPet=petNext&&S.pet&&!st.pets.includes(S.pet);if(newPet)st.pets.push(S.pet);saveStats(st);
+  const got=st.pets.filter(k=>PETS.includes(k)).length;
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
-  $('card').innerHTML=`${AD}<h3>できました</h3><p>${LV[S.lv].name}</p><div class="big">${fmt(S.elapsed)}</div><p>${S.hints?`ヒント ${S.hints}回`:''}${rec&&S.hints?'<br>':''}${rec?'<b style="color:var(--accent-d)">この難しさで最速です</b>':''}</p>
+  $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
+  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}<br><small>集めた絵 ${got} / ${PETS.length}</small></p>
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
-  const ov=$('overlay');if(petNext){ov.style.setProperty('--pet',`url(${petNext})`);ov.classList.add('pet');}
-  ov.classList.add('show');
-  const ins=$('card').querySelector('ins.adsbygoogle');
-  if(ins&&getComputedStyle(ins.parentNode).display!=='none'){try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(_){}}
+  // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
+  if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
+  if(petNext)board.classList.add('full');
+  setTimeout(()=>{
+    const ov=$('overlay');if(petNext){ov.style.setProperty('--pet',`url(${petNext})`);ov.classList.add('pet');}
+    ov.classList.add('show');
+    const ins=$('card').querySelector('ins.adsbygoogle');
+    if(ins&&getComputedStyle(ins.parentNode).display!=='none'){try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch(_){}}
+  },petNext?2200:300);
 }
 
 board.addEventListener('click',e=>{const c=e.target.closest('.c');if(!c||!live())return;const i=+c.dataset.i;
