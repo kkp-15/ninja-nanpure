@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ナンプレ｜難しさを選んで1問ずつ遊べる｜無料・登録不要</title>
-<meta name="description" content="通勤・通学のすきま時間に。難しさを4段階から選ぶと、答えが1つに決まるナンプレ（数独）をその場で作ります。メモ書き・ひとつ戻す・ヒント・途中保存つき。">
+<title>ナンプレ｜解くとかわいい動物の写真が集まる｜無料・登録不要</title>
+<meta name="description" content="解くたびに、かわいい子猫・子犬・うさぎなどの写真が図鑑に集まる無料のナンプレ（数独）。毎日1問の今日のミッション、難しさ4段階、メモ・ヒント・途中保存つき。登録不要でスマホですぐ遊べます。">
 <meta name="theme-color" content="#ff8a3d">
 <link rel="canonical" href="https://nanpure.kkpwebninja.com/">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta property="og:title" content="ナンプレ｜通勤・通学のすきまに1問">
-<meta property="og:description" content="難しさを4段階から選ぶと、答えが1つに決まるナンプレをその場で作ります。片手で遊べる1画面。無料・登録不要。">
+<meta property="og:title" content="ナンプレ｜解くとかわいい動物が集まる">
+<meta property="og:description" content="毎日1問のミッションをクリアすると、子猫や子犬の写真が1枚ずつ図鑑に集まります。無料・登録不要。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://nanpure.kkpwebninja.com/">
 <meta property="og:site_name" content="ナンプレ">
-<meta property="og:image" content="https://nanpure.kkpwebninja.com/ogp.png?d=20261028">
+<meta property="og:image" content="https://nanpure.kkpwebninja.com/ogp.png?d=20261031">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://nanpure.kkpwebninja.com/ogp.png?d=20261028">
+<meta name="twitter:image" content="https://nanpure.kkpwebninja.com/ogp.png?d=20261031">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"ナンプレ","url":"https://nanpure.kkpwebninja.com/","description":"難しさを4段階から選ぶと、答えが1つに決まるナンプレ（数独）をその場で作って遊べる無料のWebアプリ。メモ・ひとつ戻す・ヒント・途中保存つき。","applicationCategory":"GameApplication","operatingSystem":"Web","inLanguage":"ja","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"author":{"@type":"Organization","name":"web忍者の砦"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"ナンプレ","url":"https://nanpure.kkpwebninja.com/","description":"解くとかわいい動物の写真が図鑑に集まるナンプレ。難しさを4段階から選ぶと、答えが1つに決まるナンプレ（数独）をその場で作って遊べる無料のWebアプリ。メモ・ひとつ戻す・ヒント・途中保存つき。","applicationCategory":"GameApplication","operatingSystem":"Web","inLanguage":"ja","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"author":{"@type":"Organization","name":"web忍者の砦"}}
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-2LM85GJN0L"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-2LM85GJN0L');</script>
@@ -130,6 +130,18 @@ body.playing footer{display:none}
 .extra button span{font-size:.75rem;color:var(--sub)}
 .extra button.today{border-color:var(--accent);background:var(--peer)}
 .extra button.today.doneday{background:#fff;border-color:var(--line)}
+.next{display:flex;align-items:center;gap:10px;margin:8px auto 0;padding:8px 10px;border:1px dashed var(--accent);border-radius:12px;max-width:300px;text-align:left;font-size:.85rem;color:var(--sub)}
+.next i{flex:none;width:52px;height:52px;border-radius:10px;background:center 15%/cover;filter:blur(7px) saturate(.6);transform:scale(.9)}
+.card .btns a.dl{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--ink);text-decoration:none}
+/* 説明（検索から来た人向け）。操作の下に置く */
+.about{max-width:480px;margin:0 auto;padding:8px 16px 8px;color:var(--ink);line-height:1.8}
+.about h2{font-size:1.1rem;margin:18px 0 6px}
+.about p{margin:6px 0;color:var(--bold)}
+.about .pics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.about .pics img{width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block}
+.about details{border-top:1px solid var(--line);padding:8px 0}
+.about summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
+body.playing .about{display:none}
 .album{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 2px}
 .album button{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:#f3efe8 center 15%/cover no-repeat;padding:0;font-size:1.3rem;font-weight:800;color:#c9b99f}
 </style>
@@ -177,6 +189,23 @@ body.playing footer{display:none}
     <div id="pad"></div>
   </section>
 </div>
+
+<section class="about" id="about">
+  <h2>解くと、かわいい動物が集まるナンプレ</h2>
+  <p>今日のミッション（1日1問）をクリアすると、子猫・子犬・うさぎ・ハムスターなどの写真が1枚ずつ「絵の図鑑」に入ります。解いている間も、太線の3×3を正しく埋めるたびに後ろの動物がうっすら見えてきます。</p>
+  <div class="pics">
+    <img src="img/pets/cat7.jpg" alt="毛布にくるまった茶トラの子猫" loading="lazy" width="687" height="920">
+    <img src="img/pets/dog5.jpg" alt="マフラーを巻いた豆柴の子犬" loading="lazy" width="687" height="920">
+    <img src="img/pets/usagi1.jpg" alt="にんじんを持った垂れ耳のうさぎ" loading="lazy" width="687" height="920">
+    <img src="img/pets/hamster1.jpg" alt="ひまわりの種をほおばるハムスター" loading="lazy" width="687" height="920">
+  </div>
+  <p>図鑑の動物は少しずつ増えていきます。集めた写真は大きく見られて、保存して待ち受けにもできます。</p>
+  <h2>よくある質問</h2>
+  <details><summary>無料ですか？登録は要りますか？</summary><p>無料です。登録もアプリのインストールも要りません。記録と集めた動物は、お使いのスマホのブラウザに保存されます。</p></details>
+  <details><summary>どんな動物がいますか？</summary><p>子猫（茶トラ・ハチワレ・三毛・黒猫・スコティッシュフォールド・ラグドールなど）、子犬（柴犬・豆柴・コーギー・トイプードル・ポメラニアン・チワワ・サモエドなど）、うさぎ、ハムスター、シマリス、ハリネズミ、文鳥、ひよこ、カワウソです。</p></details>
+  <details><summary>難しさはどう違いますか？</summary><p>かんたん・ふつうは数字を1つずつ決めていけば解けます。むずかしいは候補の絞り込みが要り、鬼はさらに上の手筋が要ります。今日のミッションは「ふつう」です。</p></details>
+  <details><summary>途中でやめても大丈夫ですか？</summary><p>1手ごとに保存しているので、ページを閉じても次に開いたときに続きから遊べます。</p></details>
+</section>
 
 <!-- WEBNINJA_UNIFIED_FOOTER -->
 <footer style="text-align:center;padding:2rem 1rem 2.5rem;font-size:.875rem;color:#5f6b7a;line-height:2;border-top:1px solid #f0e6d2;background:#fffcf7;">
@@ -274,7 +303,7 @@ onmessage=e=>{const d=e.data;if(d&&d.seed){let a=d.seed>>>0;Math.random=()=>{a=a
 `;
 const AD=`<div class="kkp-ad"><div class="kkp-ad-label">広告</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1298304917726270" data-ad-slot="2937937957" data-full-width-responsive="false"></ins></div>`;
 // 絵を足したらここに追加（img/pets/名前.jpg）。図鑑に名前が出る
-const PET_NAMES={cat1:'おひるねの茶とら',cat2:'のびのびハチワレ',cat3:'毛糸と白い子猫',cat4:'窓辺の三毛',cat5:'ティーカップの黒猫',cat6:'絵本でうとうと',cat7:'毛布の茶トラ',dog1:'クッションの柴犬',dog2:'花畑のコーギー',dog3:'かごのトイプードル',dog4:'初雪のゴールデン',usagi1:'にんじんとうさぎ',hamster1:'ほっぺのハムスター'};
+const PET_NAMES={cat1:'おひるねの茶とら',cat2:'のびのびハチワレ',cat3:'毛糸と白い子猫',cat4:'窓辺の三毛',cat5:'ティーカップの黒猫',cat6:'絵本でうとうと',cat7:'毛布の茶トラ',cat8:'毛糸帽のスコティッシュ',cat9:'段ボールのサバトラ',cat10:'こたつの白猫',cat11:'カーテンのラグドール',cat12:'ねこじゃらしとキジトラ',dog1:'クッションの柴犬',dog2:'花畑のコーギー',dog3:'かごのトイプードル',dog4:'初雪のゴールデン',dog5:'マフラーの豆柴',dog6:'ひだまりのポメラニアン',dog7:'毛布のダックス',dog8:'落ち葉とビーグル',dog9:'首かしげチワワ',dog10:'笑顔のサモエド',usagi1:'にんじんとうさぎ',usagi2:'花かんむりのうさぎ',hamster1:'ほっぺのハムスター',hamster2:'綿の中のジャンガリアン',risu1:'どんぐりのシマリス',hari1:'タオルのハリネズミ',tori1:'桜と白文鳥',tori2:'ひよこ三きょうだい',kawauso1:'手を合わせるカワウソ'};
 const PETS=Object.keys(PET_NAMES);
 let petNext='';
 // 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
@@ -282,14 +311,14 @@ let petNext='';
 // 新しい絵がもらえるのは今日のミッションだけ（2026-10-31）。ふつうの問題は集めた絵の中から出す（まだ無ければ絵なし）
 function preloadPet(){
   const got=stats().pets.filter(k=>PETS.includes(k));
-  if(S.daily){if(!S.pet||!PETS.includes(S.pet)){const left=PETS.filter(k=>!got.includes(k)),pool=left.length?left:PETS;S.pet=pool[(Math.random()*pool.length)|0];store();}}
+  if(S.daily){if(!S.pet||!PETS.includes(S.pet)){const left=PETS.filter(k=>!got.includes(k)),nx=stats().nextPet,pool=left.length?left:PETS;S.pet=left.includes(nx)?nx:pool[(Math.random()*pool.length)|0];store();}}
   else if(!got.includes(S.pet)){S.pet=got.length?got[(Math.random()*got.length)|0]:null;store();}
   petNext='';board.style.removeProperty('--pet');if(!S.pet)return;
   const u=`img/pets/${S.pet}.jpg`;
   const im=new Image();im.onload=()=>{petNext=u;board.style.setProperty('--pet',`url(${u})`);};im.src=u;
 }
 // 記録：難しさごとのクリア回数・ヒントなしの回数・集めた絵
-function stats(){try{const o=JSON.parse(localStorage.getItem(KEY+'-stats')||'{}');return {clears:o.clears||{},nohint:o.nohint||{},pets:o.pets||[],day:o.day||{}};}catch(_){return {clears:{},nohint:{},pets:[],day:{}};}}
+function stats(){try{const o=JSON.parse(localStorage.getItem(KEY+'-stats')||'{}');return {clears:o.clears||{},nohint:o.nohint||{},pets:o.pets||[],day:o.day||{},nextPet:o.nextPet||''};}catch(_){return {clears:{},nohint:{},pets:[],day:{}};}}
 // 今日の1問：日付から問題を決める（みんな同じ問題）。続けて解いた日数を数える
 const TODAY_LV='normal';
 function ymd(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -443,9 +472,11 @@ function check(){
   let dayMsg='';
   if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">ミッション ${st.day.streak}日連続</span>`;}
   const got=st.pets.filter(k=>PETS.includes(k)).length;
+  let teaser='';
+  if(S.daily){const left=PETS.filter(k=>!st.pets.includes(k));if(left.length){if(!left.includes(st.nextPet)){st.nextPet=left[(Math.random()*left.length)|0];saveStats(st);}teaser=`<div class="next"><i style="background-image:url(img/pets/${st.nextPet}.jpg)"></i><span>明日のミッションでもらえる動物<br><small>だれかは、あしたのお楽しみ</small></span></div>`;}}
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
   $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日のミッション・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
-  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}${S.daily?(newPet?'':'<br>新しい絵は少しずつ増えていきます'):'<br>新しい絵は今日のミッションでもらえます'}</small></p>
+  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}${S.daily?(newPet?'':'<br>新しい絵は少しずつ増えていきます'):'<br>新しい絵は今日のミッションでもらえます'}</small></p>${teaser}
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
   // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
   if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
@@ -491,7 +522,7 @@ $('resumeBtn').onclick=()=>{S=load();if(S){sel=-1;lock=0;enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
 $('overlay').addEventListener('click',e=>{const pk=e.target.dataset.pet;
   // 図鑑の絵を押したら大きく見る
-  if(pk){const ov=$('overlay');ov.style.setProperty('--pet',`url(img/pets/${pk}.jpg)`);ov.classList.add('pet');$('card').innerHTML=`<p><b>${PET_NAMES[pk]}</b></p><div class="btns"><button class="pri" data-act="album">図鑑にもどる</button></div>`;return;}
+  if(pk){const ov=$('overlay');ov.style.setProperty('--pet',`url(img/pets/${pk}.jpg)`);ov.classList.add('pet');$('card').innerHTML=`<p><b>${PET_NAMES[pk]}</b></p><div class="btns"><a class="dl" href="img/pets/${pk}.jpg" download="nanpure-${pk}.jpg">画像を保存する（待ち受けにどうぞ）</a><button class="pri" data-act="album">図鑑にもどる</button></div>`;if(window.gtag)gtag('event','nanpure_pet_view',{pet:pk});return;}
   const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
