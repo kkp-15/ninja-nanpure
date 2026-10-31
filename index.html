@@ -123,7 +123,7 @@ body.playing footer{display:none}
 /* クリアのごほうび：背景に猫か犬の絵（上半分に見える） */
 #overlay.pet{background:#f3efe8 var(--pet) center top/min(100%,600px) auto no-repeat}
 .hide{display:none!important}
-/* 今日の1問・絵の図鑑（難しさボタンの上の1列） */
+/* 今日のミッション・絵の図鑑（難しさボタンの上の1列） */
 .extra{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .extra button{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:58px;padding:8px 12px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .extra button b{font-size:.98rem}
@@ -152,7 +152,8 @@ body.playing footer{display:none}
       <li>たて・よこ・太線の3×3に、1〜9が1つずつ入るように埋めます。</li>
       <li>マスを押してから数字を押します。先に数字を押すと、その数字を持ったまま空いているマスを押すだけで続けて入れられます（もう一度押すとやめます）。</li>
       <li>同じ列・行・ブロックに同じ数字があるときだけ赤くなります。</li>
-      <li>太線の3×3をぜんぶ正しく埋めると、後ろの絵がうっすら見えます。最後まで解くと絵がぜんぶ出ます。</li>
+      <li>今日のミッションは1日1問。クリアすると絵が1枚もらえて、図鑑に入ります。</li>
+      <li>太線の3×3をぜんぶ正しく埋めると、後ろの絵がうっすら見えます。最後まで解くと絵がぜんぶ出ます（ふつうの問題では集めた絵が出ます）。</li>
       <li>数字を入れると、同じ列・行・ブロックのメモは自動で消えます。</li>
       <li>アプリを切り替えると時計は止まります。</li>
     </ul></details>
@@ -277,10 +278,14 @@ const PET_NAMES={cat1:'おひるねの茶とら',cat2:'のびのびハチワレ'
 const PETS=Object.keys(PET_NAMES);
 let petNext='';
 // 次のクリアで出す絵を先に読み込んでおく（クリアした瞬間に出るように）
-// 絵は問題ごとに決めて保存する（続きから遊んでも同じ絵）。まだ集めていない絵を先に出す
+// 絵は問題ごとに決めて保存する（続きから遊んでも同じ絵）。
+// 新しい絵がもらえるのは今日のミッションだけ（2026-10-31）。ふつうの問題は集めた絵の中から出す（まだ無ければ絵なし）
 function preloadPet(){
-  if(!S.pet||!PETS.includes(S.pet)){const got=stats().pets,left=PETS.filter(k=>!got.includes(k)),pool=left.length?left:PETS;S.pet=pool[(Math.random()*pool.length)|0];store();}
-  const u=`img/pets/${S.pet}.jpg`;petNext='';board.style.removeProperty('--pet');
+  const got=stats().pets.filter(k=>PETS.includes(k));
+  if(S.daily){if(!S.pet||!PETS.includes(S.pet)){const left=PETS.filter(k=>!got.includes(k)),pool=left.length?left:PETS;S.pet=pool[(Math.random()*pool.length)|0];store();}}
+  else if(!got.includes(S.pet)){S.pet=got.length?got[(Math.random()*got.length)|0]:null;store();}
+  petNext='';board.style.removeProperty('--pet');if(!S.pet)return;
+  const u=`img/pets/${S.pet}.jpg`;
   const im=new Image();im.onload=()=>{petNext=u;board.style.setProperty('--pet',`url(${u})`);};im.src=u;
 }
 // 記録：難しさごとのクリア回数・ヒントなしの回数・集めた絵
@@ -319,7 +324,7 @@ function showHome(){
   if(saved&&!saved.done)$('resumeBtn').textContent=`続きから遊ぶ（${LV[saved.lv].name}・${fmt(saved.elapsed)}）`;
   if(!$('mini').firstChild){const A='534678912672195348198342567859761423426853791713924856961537284287419635345286179',H='100110011010001100001100010100010001010101010100010001010001100001100010110011001';$('mini').innerHTML=[...A].map((v,i)=>{const x=i%9,y=(i/9)|0;return `<i class="${x===2||x===5?'br ':''}${y===2||y===5?'bb':''}">${H[i]==='1'?v:''}</i>`;}).join('');}
   const st=stats(),t=ymd(),doneToday=st.day.last===t,sk=streakNow(st.day);
-  $('todayBtn').innerHTML=`<b>今日の1問</b><span>${doneToday?'今日はクリア済み':`${LV[TODAY_LV].name}・みんな同じ問題`}${sk?`・${sk}日連続`:''}</span>`;
+  $('todayBtn').innerHTML=`<b>今日のミッション</b><span>${doneToday?'今日はクリア済み':`${LV[TODAY_LV].name}・クリアで絵が1枚もらえる`}${sk?`・${sk}日連続`:''}</span>`;
   $('todayBtn').classList.toggle('doneday',doneToday);
   $('albumBtn').innerHTML=`<b>絵の図鑑</b><span>集めた絵 ${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}</span>`;
   $('lvList').innerHTML=Object.entries(LV).map(([k,v])=>{const b=best(k);const n=st.clears[k]||0;return `<button data-lv="${k}"><b>${v.name}</b><span>${v.desc}${b||n?'<br>':''}${n?`クリア ${n}回`:''}${b&&n?'・':''}${b?`最速 ${fmt(b)}`:''}</span></button>`;}).join('');
@@ -336,7 +341,7 @@ function enterPlay(){
   preloadPet();
   document.body.classList.add('playing');window.scrollTo(0,0);
   $('home').classList.add('hide');$('play').classList.remove('hide');$('stat').classList.remove('hide');
-  board.classList.remove('full');$('lvName').textContent=S.daily?'今日の1問':LV[S.lv].name;memoMode=false;syncMemo();render();go();
+  board.classList.remove('full');$('lvName').textContent=S.daily?'今日のミッション':LV[S.lv].name;memoMode=false;syncMemo();render();go();
 }
 
 // ===== 時計（見えていない間は止める） =====
@@ -434,13 +439,13 @@ function check(){
   stop();S.done=true;sel=-1;lock=0;store();render();
   const rec=best(S.lv,S.elapsed)===true;
   const st=stats();st.clears[S.lv]=(st.clears[S.lv]||0)+1;if(!S.hints)st.nohint[S.lv]=(st.nohint[S.lv]||0)+1;
-  const newPet=petNext&&S.pet&&!st.pets.includes(S.pet);if(newPet)st.pets.push(S.pet);saveStats(st);
+  const newPet=S.daily&&petNext&&S.pet&&!st.pets.includes(S.pet);if(newPet)st.pets.push(S.pet);saveStats(st);
   let dayMsg='';
-  if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">今日の1問 ${st.day.streak}日連続</span>`;}
+  if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">ミッション ${st.day.streak}日連続</span>`;}
   const got=st.pets.filter(k=>PETS.includes(k)).length;
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
-  $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日の1問・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
-  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}</small></p>
+  $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日のミッション・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
+  <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}${S.daily?(newPet?'':'<br>新しい絵は少しずつ増えていきます'):'<br>新しい絵は今日のミッションでもらえます'}</small></p>
   <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
   // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
   if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
@@ -472,7 +477,7 @@ $('pauseBtn').onclick=()=>{if(S&&S.gaveup){giveupCard();return;}if(!S||S.done)re
   $('overlay').classList.add('show');};
 function albumCard(){
   const st=stats();
-  $('card').innerHTML=`<h3>絵の図鑑</h3><p>${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}　解くたびに、まだ見ていない絵から出ます</p>
+  $('card').innerHTML=`<h3>絵の図鑑</h3><p>${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}　今日のミッションをクリアすると1枚ずつ増えます。絵も少しずつ増やしていきます</p>
   <div class="album">${PETS.map(k=>st.pets.includes(k)?`<button data-pet="${k}" aria-label="${PET_NAMES[k]}" style="background-image:url(img/pets/${k}.jpg)"></button>`:`<button disabled aria-label="まだ">?</button>`).join('')}</div>
   <div class="btns"><button class="pri" data-act="home">閉じる</button></div>`;
   $('overlay').classList.remove('pet');$('overlay').classList.add('show');
@@ -480,7 +485,7 @@ function albumCard(){
 $('albumBtn').onclick=albumCard;
 $('todayBtn').onclick=()=>{const t=ymd(),saved=load();
   if(saved&&!saved.done&&saved.daily===t){S=saved;sel=-1;lock=0;enterPlay();return;}
-  if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。今日の1問を始めますか？'))return;
+  if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。今日のミッションを始めますか？'))return;
   start(TODAY_LV,t);};
 $('resumeBtn').onclick=()=>{S=load();if(S){sel=-1;lock=0;enterPlay();}};
 $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const saved=load();if(saved&&!saved.done&&saved.cells.some((v,i)=>v&&!saved.puzzle[i])&&!confirm('途中の問題があります。新しい問題を始めますか？'))return;start(b.dataset.lv);});
