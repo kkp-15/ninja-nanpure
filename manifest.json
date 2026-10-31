@@ -1,0 +1,15 @@
+{
+  "name": "ナンプレ｜解くとかわいい動物が集まる",
+  "short_name": "ナンプレ",
+  "description": "毎日1問のミッションをクリアすると、かわいい動物の写真が図鑑に集まるナンプレ",
+  "start_url": "/?utm_source=homescreen",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff9ec",
+  "theme_color": "#ff8a3d",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

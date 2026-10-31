@@ -10,6 +10,10 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ナンプレ">
 <meta property="og:title" content="ナンプレ｜解くとかわいい動物が集まる">
 <meta property="og:description" content="毎日1問のミッションをクリアすると、子猫や子犬の写真が1枚ずつ図鑑に集まります。無料・登録不要。">
 <meta property="og:type" content="website">
@@ -472,12 +476,13 @@ function check(){
   let dayMsg='';
   if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">ミッション ${st.day.streak}日連続</span>`;}
   const got=st.pets.filter(k=>PETS.includes(k)).length;
+  const inst=S.daily&&canInstall()?'<button data-act="install">ホーム画面に追加して、明日もすぐ開く</button>':'';
   let teaser='';
   if(S.daily){const left=PETS.filter(k=>!st.pets.includes(k));if(left.length){if(!left.includes(st.nextPet)){st.nextPet=left[(Math.random()*left.length)|0];saveStats(st);}teaser=`<div class="next"><i style="background-image:url(img/pets/${st.nextPet}.jpg)"></i><span>明日のミッションでもらえる動物<br><small>だれかは、あしたのお楽しみ</small></span></div>`;}}
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
   $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日のミッション・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
   <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}${S.daily?(newPet?'':'<br>新しい絵は少しずつ増えていきます'):'<br>新しい絵は今日のミッションでもらえます'}</small></p>${teaser}
-  <div class="btns"><button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
+  <div class="btns">${inst}<button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>`;
   // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
   if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
   if(petNext)board.classList.add('full');
@@ -506,6 +511,16 @@ $('memoBtn').onclick=()=>{memoMode=!memoMode;syncMemo();};
 $('pauseBtn').onclick=()=>{if(S&&S.gaveup){giveupCard();return;}if(!S||S.done)return;stop();$('pauseBtn').textContent='再開';
   $('card').innerHTML=`<h3>一時停止中</h3><p>${LV[S.lv].name}・${fmt(S.elapsed)}</p><div class="btns"><button data-act="new">同じ難しさで新しい問題</button><button data-act="home">難しさを選び直す</button><button data-act="giveup">降参して答えを見る</button><button class="pri" data-act="resume">続ける</button></div>`;
   $('overlay').classList.add('show');};
+// ホーム画面に追加（Android は本物の追加画面、iPhone は手順を出す）。追加済みなら案内しない
+let installEv=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e;});
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function canInstall(){return !(matchMedia('(display-mode: standalone)').matches||navigator.standalone)&&(isIOS||!!installEv);}
+async function installApp(){
+  if(window.gtag)gtag('event','nanpure_install_click',{ios:isIOS});
+  if(installEv){installEv.prompt();const c=await installEv.userChoice;installEv=null;if(c.outcome==='accepted'){const b=document.querySelector('[data-act=install]');if(b)b.remove();}return;}
+  $('card').innerHTML=`<h3>ホーム画面に追加</h3><p style="text-align:left;line-height:1.9">1. 画面の下（または上）の共有ボタン（四角から上向きの矢印）を押す<br>2.「ホーム画面に追加」を選ぶ<br>3. 右上の「追加」を押す</p><p><small>Safari で開いているときに使えます</small></p><div class="btns"><button class="pri" data-act="home">わかった</button></div>`;
+}
 function albumCard(){
   const st=stats();
   $('card').innerHTML=`<h3>絵の図鑑</h3><p>${st.pets.filter(k=>PETS.includes(k)).length} / ${PETS.length}　今日のミッションをクリアすると1枚ずつ増えます。絵も少しずつ増やしていきます</p>
@@ -523,7 +538,7 @@ $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('overlay').addEventListener('click',e=>{const pk=e.target.dataset.pet;
   // 図鑑の絵を押したら大きく見る
   if(pk){const ov=$('overlay');ov.style.setProperty('--pet',`url(img/pets/${pk}.jpg)`);ov.classList.add('pet');$('card').innerHTML=`<p><b>${PET_NAMES[pk]}</b></p><div class="btns"><a class="dl" href="img/pets/${pk}.jpg" download="nanpure-${pk}.jpg">画像を保存する（待ち受けにどうぞ）</a><button class="pri" data-act="album">図鑑にもどる</button></div>`;if(window.gtag)gtag('event','nanpure_pet_view',{pet:pk});return;}
-  const a=e.target.dataset.act;if(!a)return;$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
+  const a=e.target.dataset.act;if(!a)return;if(a==='install'){installApp();return;}$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
   if(!S||$('play').classList.contains('hide'))return;
