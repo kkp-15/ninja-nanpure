@@ -487,12 +487,14 @@ function check(){
   if(S.daily&&S.daily===ymd()&&st.day.last!==S.daily){const sk=streakNow(st.day);st.day.streak=sk+1;st.day.last=S.daily;st.day.best=Math.max(st.day.best||0,st.day.streak);saveStats(st);dayMsg=`<span class="badge">ミッション ${st.day.streak}日連続</span>`;}
   const got=st.pets.filter(k=>PETS.includes(k)).length;
   const inst=S.daily&&canInstall()?'<button data-act="install">ホーム画面に追加して、明日もすぐ開く</button>':'';
+  // ミッション以外をクリアして、今日のミッションがまだなら案内する（2026-11-04）
+  const toDay=!S.daily&&st.day.last!==ymd()?`<button data-act="today">今日のミッションへ（絵が1枚もらえる）</button>`:'';
   let teaser='';
   if(S.daily){const left=PETS.filter(k=>!st.pets.includes(k));if(left.length){if(!left.includes(st.nextPet)){st.nextPet=left[(Math.random()*left.length)|0];saveStats(st);}teaser=`<div class="next"><i style="background-image:url(img/pets/${st.nextPet}.jpg)"></i><span>明日のミッションでもらえる動物<br><small>だれかは、あしたのお楽しみ</small></span></div>`;}}
   if(window.gtag)gtag('event','nanpure_clear',{lv:S.lv,sec:Math.round(S.elapsed/1000),hints:S.hints||0});
   $('card').innerHTML=`${AD}<h3>できました</h3><div class="big">${fmt(S.elapsed)}</div><p>${S.daily?'今日のミッション・':''}${LV[S.lv].name}で ${st.clears[S.lv]}回目のクリア${S.hints?`（ヒント ${S.hints}回）`:''}</p>
   <p>${rec?'<span class="badge">最速</span>':''}${S.hints?'':'<span class="badge">ヒントなし</span>'}${newPet?'<span class="badge">新しい絵</span>':''}${dayMsg}<br><small>${petNext&&PET_NAMES[S.pet]?`「${PET_NAMES[S.pet]}」${newPet?'を図鑑に入れました・':'・'}`:''}集めた絵 ${got} / ${PETS.length}${S.daily?(newPet?'':'<br>新しい絵は少しずつ増えていきます'):'<br>新しい絵は今日のミッションでもらえます'}</small></p>${teaser}
-  <div class="btns">${inst}<button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>${BOOK}`;
+  <div class="btns">${inst}${toDay}<button class="pri" data-act="next">同じ難しさで次の問題</button><button data-act="home">難しさを選ぶ</button></div>${BOOK}`;
   // 盤の数字が消えて絵がぜんぶ出る→少し見せてから結果
   if(navigator.vibrate)navigator.vibrate([30,60,30,60,80]);
   if(petNext)board.classList.add('full');
@@ -548,7 +550,7 @@ $('lvList').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('overlay').addEventListener('click',e=>{const pk=e.target.dataset.pet;
   // 図鑑の絵を押したら大きく見る
   if(pk){const ov=$('overlay');ov.style.setProperty('--pet',`url(img/pets/${pk}.jpg)`);ov.classList.add('pet');$('card').innerHTML=`<p><b>${PET_NAMES[pk]}</b></p><div class="btns"><a class="dl" href="img/pets/${pk}.jpg" download="nanpure-${pk}.jpg">画像を保存する（待ち受けにどうぞ）</a><button class="pri" data-act="album">図鑑にもどる</button></div>`;if(window.gtag)gtag('event','nanpure_pet_view',{pet:pk});return;}
-  const a=e.target.dataset.act;if(!a)return;if(a==='install'){installApp();return;}$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='next'||a==='new')start(S.lv);else showHome();});
+  const a=e.target.dataset.act;if(!a)return;if(a==='install'){installApp();return;}$('overlay').classList.remove('show','pet');if(a==='album')albumCard();else if(a==='resume')go();else if(a==='giveup')giveup();else if(a==='look'){}else if(a==='today')$('todayBtn').onclick();else if(a==='next'||a==='new')start(S.lv);else showHome();});
 // パソコンのキーボード
 document.addEventListener('keydown',e=>{
   if(!S||$('play').classList.contains('hide'))return;
