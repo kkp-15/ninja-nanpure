@@ -8,6 +8,7 @@
    - 演出の部品: KKit.fx.slash（札を刀で斬る）・KKit.fx.shuriken（手裏剣が飛んできて刺さる）。下の fxParts を見る
    - 配信の土台（2026-10-21〜）: KKit.stream / KKit.live / KKit.openView / KKit.view / KKit.resume / KKit.twice / KKit.fitText / KKit.streamTitle。下の streamParts を見る。
      読み込み時に使うページは kit.js を defer なしで <head> に置く（本体の script より先に KKit が要るため）
+   - 録画モード（2026-11-27〜）: KKit.rec。?rec=1 でインスタ用の縦9:16画面。下の recParts を見る
    - 遊びの部品（2026-10-22〜）: KKit.die（サイコロ）・KKit.wheel（ルーレット盤）・KKit.gateArt（ゲートの絵・canvas 用）。下の gameParts を見る
    動きを減らす設定（prefers-reduced-motion）では、季節と部品の手伝い以外は何もしない（演出の部品は動かさずに、すぐ結果の合図だけ出す）。 */
 (function () {
@@ -18,6 +19,7 @@
   if (season) root.setAttribute('data-k-season', season);
 
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  recParts();
   fxParts();
   helpers();
   streamParts();
@@ -298,6 +300,113 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto); else auto();
   }
 
+  /* ===== 録画モード（2026-11-27〜・手本はマッスルタイピング 90712ed） =====
+     ?rec=1 で入る。画面録画してインスタ（リール・ストーリーズ）に載せやすい縦9:16の画面にする。
+     kit.js を読んだ時点で判定して <html data-k-rec> を付ける（広告の判定より前に kit.js を defer なしで読む）。
+     KKit.rec.on                 録画モードか
+     KKit.rec.noAds()            広告を読まないか（録画モードなら true）。KKit.stream.noAds() も録画モードでは true
+     KKit.rec.ga()               GA4 は rec_mode のイベントを1回だけ送り、そのあとの gtag は何もしない。
+                                 kit.js を読んだときに window.gtag があれば自動で呼ぶ（GA4 のあとに kit.js を置く）
+     KKit.rec.title(枠, { big, sub, ms })  はじめの見出し（何のゲームか1〜2秒で分かる。既定1.8秒で消える）
+     KKit.rec.exitUrl()          rec を外した URL（a.k-rec-exit の href は自動でこれになる＝「ふつうの画面に戻る」）
+     KKit.rec.kb()               スマホのキーボードの高さを --k-rec-kb に入れ直す（visualViewport。自動で追う）
+     KKit.rec.cheer(枠, { pose, say, ms })  看板の女の子が左下から出てひとこと（pose: clap・wow・wave・guts）
+     KKit.rec.end(枠, { name, sub, url, note })   しめの札（押すと消える・note は下の小さい字＝英語版用）。結果のあと「もう1回」と並べて出す
+     <div class="k-rec-stage" data-rec-bg="…webp">  背景の絵（上下の隠れる所に見え、まん中は幕で薄める）
+     ?rec=1&recguide=1           インスタに隠れる所（上14%・下20%・右端12%）を赤く塗って確かめる
+     配信モード（KKit.stream）とは別物。録画モードの間は配信モードに入らない（覚えた配信モードは消さない）。 */
+  function recParts() {
+    var K = window.KKit = window.KKit || {};
+    var q = location.search;
+    var R = K.rec = {
+      on: /[?&]rec=1(&|$)/.test(q),
+      guide: /[?&]recguide=1(&|$)/.test(q),
+      noAds: function () { return R.on; },
+      ga: function () {
+        if (!R.on || R._ga) return;
+        if (typeof window.gtag !== 'function') return;
+        R._ga = true;
+        try { window.gtag('event', 'rec_mode', { page_path: location.pathname }); } catch (e) {}
+        window.gtag = function () {};
+      },
+      exitUrl: function () {
+        try {
+          var u = new URL(location.href);
+          u.searchParams.delete('rec'); u.searchParams.delete('recguide'); u.hash = '';
+          return u.pathname + u.search;
+        } catch (e) { return location.pathname; }
+      },
+      title: function (box, o) {
+        o = o || {}; box = typeof box === 'string' ? document.querySelector(box) : box;
+        if (!box) return null;
+        var old = box.querySelector('.k-rec-title'); if (old) old.remove();
+        var t = document.createElement('div');
+        t.className = 'k-rec-title'; t.setAttribute('aria-hidden', 'true');
+        var b = document.createElement('b'); b.textContent = o.big || ''; t.appendChild(b);
+        if (o.sub) { var s = document.createElement('span'); s.textContent = o.sub; t.appendChild(s); }
+        box.appendChild(t);
+        setTimeout(function () { if (t.parentNode) t.remove(); }, o.ms || 1800);
+        return t;
+      },
+      cheer: function (box, o) {
+        o = o || {}; box = typeof box === 'string' ? document.querySelector(box) : box;
+        if (!R.on || !box) return null;
+        var old = box.querySelector('.k-rec-cheer'); if (old) old.remove();
+        var c = document.createElement('div'), ms = o.ms || 2400;
+        c.className = 'k-rec-cheer'; c.setAttribute('aria-hidden', 'true');
+        if (o.pose && o.pose !== 'clap') c.setAttribute('data-pose', o.pose);
+        c.style.setProperty('--k-rec-cheer-ms', ms + 'ms');
+        c.appendChild(document.createElement('i'));
+        if (o.say) { var b = document.createElement('b'); b.textContent = o.say; c.appendChild(b); }
+        box.appendChild(c);
+        setTimeout(function () { if (c.parentNode) c.remove(); }, ms);
+        return c;
+      },
+      end: function (box, o) {
+        o = o || {}; box = typeof box === 'string' ? document.querySelector(box) : box;
+        if (!R.on || !box) return null;
+        var old = box.querySelector('.k-rec-end'); if (old) old.remove();
+        var e = document.createElement('div');
+        e.className = 'k-rec-end'; e.setAttribute('role', 'button'); e.setAttribute('aria-label', '閉じる');
+        e.appendChild(document.createElement('i'));
+        var b = document.createElement('b'); b.textContent = o.name || document.title.split(/[｜|]/)[0]; e.appendChild(b);
+        if (o.sub) { var s = document.createElement('span'); s.textContent = o.sub; e.appendChild(s); }
+        var u = document.createElement('u'); u.textContent = o.url || location.host; e.appendChild(u);
+        var sm = document.createElement('small'); sm.textContent = o.note || '無料・会員登録なし・スマホ1台で'; e.appendChild(sm);  // 英語版は note で差し替える
+        e.addEventListener('click', function () { e.remove(); });
+        box.appendChild(e);
+        return e;
+      },
+      kb: function () {
+        var vv = window.visualViewport, h = 0;
+        if (vv) h = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+        root.style.setProperty('--k-rec-kb', h + 'px');
+        return h;
+      }
+    };
+    if (!R.on) return;
+    root.setAttribute('data-k-rec', '');
+    if (R.guide) root.setAttribute('data-k-rec-guide', '');
+    R.ga();
+    if (window.visualViewport) { visualViewport.addEventListener('resize', R.kb); visualViewport.addEventListener('scroll', R.kb); }
+    var wire = function () {
+      R.kb();
+      var bgs = document.querySelectorAll('.k-rec-stage[data-rec-bg]');
+      for (var j = 0; j < bgs.length; j++) bgs[j].style.setProperty('--k-rec-bg', 'url("' + new URL(bgs[j].getAttribute('data-rec-bg'), location.href).href + '")');  // css の url() は kit.css からの相対になるので、ページからの絶対URLにして渡す
+      var ex = document.querySelectorAll('a.k-rec-exit');
+      for (var i = 0; i < ex.length; i++) ex[i].setAttribute('href', R.exitUrl());
+      if (R.guide) {
+        var st = document.querySelector('.k-rec-stage');
+        if (st && !st.querySelector('.k-rec-guide')) {
+          var g = document.createElement('div'); g.className = 'k-rec-guide'; g.setAttribute('aria-hidden', 'true');
+          g.innerHTML = '<i class="t"></i><i class="b"></i><i class="r"></i>';
+          st.appendChild(g);
+        }
+      }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+  }
+
   /* ===== 配信の土台（2026-10-21〜） =====
      KKit.stream.init({ key })      配信モードかどうか（PC幅768以上・?mode=stream で入る・?mode=normal で出る）。<html data-k-stream> を付ける
      KKit.stream.set(on, params)    切り替え。URL の #… と mode= を消してから読み直す（#付きだと読み直さない不具合の再発防止）
@@ -336,13 +445,14 @@
     var ST = K.stream = {
       key: 'k-stream', on: false,
       can: function () { return !!window.__kkpTest || !!(window.matchMedia && matchMedia('(min-width:768px)').matches); },
-      noAds: function () { return ST.on || !!window.__kkpTest; },
+      noAds: function () { return ST.on || !!window.__kkpTest || !!(K.rec && K.rec.on); },
       init: function (o) {
         o = o || {}; if (o.key) ST.key = o.key;
         var q = location.search;
         if (/[?&]mode=normal\b/.test(q)) ls.del(ST.key);
         else if (/[?&]mode=stream\b/.test(q) && ST.can()) ls.set(ST.key, '1');
-        ST.on = ST.can() && ls.get(ST.key) === '1';
+        // 録画モード（?rec=1）の間は配信モードに入らない（覚えた配信モードは消さない）
+        ST.on = ST.can() && ls.get(ST.key) === '1' && !(K.rec && K.rec.on);
         if (ST.on) {
           root.setAttribute('data-k-stream', '');
           try { history.scrollRestoration = 'manual'; } catch (e) {}
